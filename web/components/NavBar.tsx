@@ -52,6 +52,19 @@ export default function NavBar() {
         </a>
       </div>
 
+      {/* Keyboard shortcut hint */}
+      <button
+        onClick={() => {
+          const ev = new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true });
+          window.dispatchEvent(ev);
+        }}
+        className="hidden md:flex items-center gap-1.5 text-xs text-[#565f89] hover:text-[#c0caf5] transition-colors border border-[#2a2b3d] px-2 py-1 hover:border-[#565f89]"
+        title="Open command palette"
+      >
+        <span>press</span>
+        <kbd className="font-mono">/</kbd>
+      </button>
+
       {/* Auth */}
       <div className="text-sm">
         {user ? (

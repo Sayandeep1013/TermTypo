@@ -114,6 +114,13 @@ export default function TypingTest() {
 
     const el = (Date.now() - startTime.current) / 1000;
 
+    // Tab always restarts — never lets focus leave the input
+    if (e.key === "Tab") {
+      e.preventDefault();
+      reset();
+      return;
+    }
+
     if (e.key === "Backspace") {
       e.preventDefault();
       setTyped(prev => {
@@ -186,7 +193,7 @@ export default function TypingTest() {
       <div className="flex items-center gap-4 text-sm text-[#565f89]">
         <div className="flex gap-3">
           {(["words", "time"] as Mode[]).map(m => (
-            <button key={m} onClick={() => setMode(m)}
+            <button key={m} onClick={() => setMode(m)} tabIndex={-1}
               className={`transition-colors ${mode === m ? "text-[#7aa2f7] underline underline-offset-4" : "hover:text-[#c0caf5]"}`}>
               {m}
             </button>
@@ -196,7 +203,7 @@ export default function TypingTest() {
         {mode === "words" ? (
           <div className="flex gap-3">
             {WORD_COUNTS.map(n => (
-              <button key={n} onClick={() => setWordCount(n)}
+              <button key={n} onClick={() => setWordCount(n)} tabIndex={-1}
                 className={`transition-colors ${wordCount === n ? "text-[#7aa2f7] underline underline-offset-4" : "hover:text-[#c0caf5]"}`}>
                 {n}
               </button>
@@ -205,7 +212,7 @@ export default function TypingTest() {
         ) : (
           <div className="flex gap-3">
             {TIME_OPTIONS.map(t => (
-              <button key={t} onClick={() => setTimeSec(t)}
+              <button key={t} onClick={() => setTimeSec(t)} tabIndex={-1}
                 className={`transition-colors ${timeSec === t ? "text-[#7aa2f7] underline underline-offset-4" : "hover:text-[#c0caf5]"}`}>
                 {t}s
               </button>
@@ -285,18 +292,30 @@ export default function TypingTest() {
         </div>
       )}
 
-      {/* Hidden real input (captures keystrokes) */}
+      {/*
+        Hidden input that captures all keystrokes.
+        - autoFocus: grabs focus the moment the page renders (first keypress works)
+        - tabIndex={0}: browser Tab naturally loops back here (and we intercept Tab to restart)
+        - onBlur: re-focuses after 80ms — recovers if user accidentally clicks away
+          (timeout lets command palette / mode buttons receive their click first)
+      */}
       <input
         ref={inputRef}
+        autoFocus
         onKeyDown={onKeyDown}
-        className="opacity-0 absolute top-0 left-0 w-0 h-0"
+        onBlur={() => {
+          if (!result) setTimeout(() => inputRef.current?.focus(), 80);
+        }}
+        className="sr-only"
         autoComplete="off" autoCorrect="off" spellCheck="false"
-        readOnly
-        tabIndex={-1}
+        tabIndex={0}
+        aria-label="typing input"
       />
 
       <div className="text-xs text-[#565f89] text-center">
-        tab to restart · click anywhere to focus
+        <kbd className="bg-[#24283b] border border-[#2a2b3d] px-1.5 py-0.5 font-mono">tab</kbd> restart
+        {" · "}
+        click anywhere to refocus
       </div>
     </div>
   );

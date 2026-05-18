@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import NavBar from "@/components/NavBar";
+import CommandPalette from "@/components/CommandPalette";
 
 const mono = JetBrains_Mono({
   subsets: ["latin"],
@@ -25,6 +26,7 @@ export default function RootLayout({
     <html lang="en" className={mono.variable}>
       <body className="min-h-screen bg-[#1a1b26] text-[#c0caf5] font-mono">
         <NavBar />
+        <CommandPalette />
         <main>{children}</main>
       </body>
     </html>
