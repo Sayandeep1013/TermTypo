@@ -1,12 +1,21 @@
 """
-TermTypo release script.
+TermTypo release script — one command does everything.
 
 Usage:
-    python release.py           # bump patch  (0.1.1 -> 0.1.2)
-    python release.py minor     # bump minor  (0.1.x -> 0.2.0)
-    python release.py major     # bump major  (0.x.x -> 1.0.0)
+    python release.py           # patch bump  (0.1.x -> 0.1.x+1)
+    python release.py minor     # minor bump  (0.x.y -> 0.x+1.0)
+    python release.py major     # major bump  (x.y.z -> x+1.0.0)
 
-Reads PyPI token from .pypi_token (never committed to git).
+What it does (in order):
+    1. Bump __version__ in __init__.py and pyproject.toml
+    2. Sync README.md into client/
+    3. Build PyPI wheel + sdist
+    4. Upload to PyPI  (reads token from .pypi_token)
+    5. git commit "Release vX.Y.Z"
+    6. git tag  vX.Y.Z
+    7. git push + git push --tags
+       → GitHub Actions auto-builds Windows .exe + macOS binary
+         and attaches them to a GitHub Release page.
 """
 import os
 import re
@@ -29,8 +38,7 @@ README_DST = CLIENT / "README.md"
 
 def _read_token() -> str:
     if not TOKEN_FILE.exists():
-        _die(f".pypi_token not found at {TOKEN_FILE}\n"
-             "Create it with your PyPI API token on a single line.")
+        _die(f".pypi_token not found.\nCreate it with your PyPI API token on a single line.")
     token = TOKEN_FILE.read_text(encoding="utf-8").strip()
     if not token:
         _die(".pypi_token is empty.")
@@ -47,10 +55,8 @@ def _read_version() -> str:
 
 def _bump(version: str, kind: str) -> str:
     major, minor, patch = (int(x) for x in version.split("."))
-    if kind == "major":
-        return f"{major + 1}.0.0"
-    if kind == "minor":
-        return f"{major}.{minor + 1}.0"
+    if kind == "major": return f"{major + 1}.0.0"
+    if kind == "minor": return f"{major}.{minor + 1}.0"
     return f"{major}.{minor}.{patch + 1}"
 
 
@@ -65,10 +71,17 @@ def _write_version(new: str) -> None:
         path.write_text(text, encoding="utf-8")
 
 
-def _run(cmd: str, cwd: Path) -> None:
+def _run(cmd: str, cwd: Path = ROOT, check: bool = True) -> int:
     result = subprocess.run(cmd, shell=True, cwd=str(cwd))
-    if result.returncode != 0:
+    if check and result.returncode != 0:
         _die(f"Command failed: {cmd}")
+    return result.returncode
+
+
+def _has_remote() -> bool:
+    r = subprocess.run("git remote get-url origin", shell=True, cwd=str(ROOT),
+                       capture_output=True)
+    return r.returncode == 0
 
 
 def _die(msg: str) -> None:
@@ -87,48 +100,69 @@ def main() -> None:
     token       = _read_token()
     old_version = _read_version()
     new_version = _bump(old_version, bump_kind)
+    tag         = f"v{new_version}"
+    has_remote  = _has_remote()
 
     print(f"\n  TermTypo release")
-    print(f"  {old_version}  ->  {new_version}  ({bump_kind} bump)")
+    print(f"  {old_version}  ->  {new_version}  ({bump_kind})")
+    if has_remote:
+        print(f"  Will push tag {tag} → GitHub Actions builds exe/binary")
+    else:
+        print(f"  No git remote — skipping git push (add origin to enable)")
     print()
 
-    # Confirm
     answer = input("  Proceed? [y/N] ").strip().lower()
     if answer != "y":
         print("  Cancelled.")
         sys.exit(0)
 
-    # 1. Bump version in both files
+    # ── 1. Version bump ───────────────────────────────────────────────────────
     _write_version(new_version)
-    print(f"  [1/4] Version bumped to {new_version}")
+    print(f"  [1/7] Version bumped to {new_version}")
 
-    # 2. Sync README into the package folder
+    # ── 2. Sync README ────────────────────────────────────────────────────────
     shutil.copy(README_SRC, README_DST)
-    print("  [2/4] README synced")
+    print(f"  [2/7] README synced")
 
-    # 3. Clean old build artefacts and rebuild
+    # ── 3. Build PyPI artefacts ───────────────────────────────────────────────
     for d in [CLIENT / "dist", CLIENT / "build"]:
         if d.exists():
             shutil.rmtree(d)
     _run("python -m build", cwd=CLIENT)
-    print("  [3/4] Package built")
+    print(f"  [3/7] Package built")
 
-    # 4. Upload to PyPI (token passed via env vars — no interactive prompt)
+    # ── 4. Upload to PyPI ─────────────────────────────────────────────────────
     env = os.environ.copy()
     env["TWINE_USERNAME"] = "__token__"
     env["TWINE_PASSWORD"] = token
-    result = subprocess.run(
-        "twine upload dist/*",
-        shell=True,
-        cwd=str(CLIENT),
-        env=env,
-    )
+    result = subprocess.run("twine upload dist/*", shell=True, cwd=str(CLIENT), env=env)
     if result.returncode != 0:
-        _die("Upload failed — check your token and internet connection.")
+        _die("PyPI upload failed — check token and internet connection.")
+    print(f"  [4/7] Published to PyPI")
 
-    print(f"  [4/4] Uploaded\n")
-    print(f"  termtypo v{new_version} is live on PyPI.")
-    print(f"  Users update with:  pip install --upgrade termtypo\n")
+    # ── 5–7. Git commit + tag + push (triggers GitHub Actions) ───────────────
+    if not has_remote:
+        print(f"\n  Skipped git steps (no remote configured).")
+        print(f"  To enable auto-builds, run:")
+        print(f"    git remote add origin <your-github-url>")
+    else:
+        _run("git add -A", cwd=ROOT)
+        _run(f'git commit -m "Release {tag}"', cwd=ROOT)
+        print(f"  [5/7] Committed")
+
+        _run(f"git tag {tag}", cwd=ROOT)
+        print(f"  [6/7] Tagged {tag}")
+
+        _run("git push", cwd=ROOT)
+        _run(f"git push origin {tag}", cwd=ROOT)
+        print(f"  [7/7] Pushed → GitHub Actions building exe + macOS binary")
+
+    print(f"\n  termtypo {tag} released!")
+    print(f"  PyPI:    https://pypi.org/project/termtypo/{new_version}/")
+    if has_remote:
+        print(f"  Builds:  https://github.com/Sayandeep1013/TermTypo/actions")
+        print(f"  Release: https://github.com/Sayandeep1013/TermTypo/releases/tag/{tag}")
+    print()
 
 
 if __name__ == "__main__":
