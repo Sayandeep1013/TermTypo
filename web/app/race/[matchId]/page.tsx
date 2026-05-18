@@ -67,25 +67,32 @@ export default function RacePage() {
       if (!user) { router.push("/ranked"); return; }
       setMyId(user.id);
 
+      // My display name comes from auth metadata — always available
+      const myDisplayName = user.user_metadata?.name
+        || user.user_metadata?.full_name
+        || user.email?.split("@")[0]
+        || "You";
+      setMyName(myDisplayName);
+
       const { data: match } = await sb
         .from("matches").select("mode, passage, is_ranked").eq("id", matchId).maybeSingle();
       if (!match) { router.push("/ranked"); return; }
       setMatchData(match);
 
+      // Fetch participants and look up opponent name directly from profiles table
       const { data: parts } = await sb
         .from("match_participants")
-        .select("user_id, profiles(username, display_name)")
+        .select("user_id")
         .eq("match_id", matchId);
 
-      if (parts) {
-        const me  = parts.find(p => p.user_id === user.id);
-        const opp = parts.find(p => p.user_id !== user.id);
-        const pName = (p: typeof parts[0]) => {
-          const prof = p.profiles as { username?: string; display_name?: string } | null;
-          return prof?.display_name || prof?.username || "Player";
-        };
-        if (me)  setMyName(pName(me));
-        if (opp) setOppName(pName(opp));
+      const oppId = parts?.find(p => p.user_id !== user.id)?.user_id;
+      if (oppId) {
+        const { data: profile } = await sb
+          .from("profiles")
+          .select("username, display_name")
+          .eq("id", oppId)
+          .maybeSingle();
+        setOppName(profile?.display_name || profile?.username || "Opponent");
       }
 
       const words = match.passage.split(" ");

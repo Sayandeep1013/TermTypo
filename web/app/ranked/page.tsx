@@ -70,7 +70,8 @@ export default function RankedPage() {
         p_passage: passage,
       });
       if (matchId) {
-        await channel.send({ type: "broadcast", event: "match_found", payload: { match_id: matchId } });
+        // Include passage so terminal clients can start the race without a DB round-trip
+        await channel.send({ type: "broadcast", event: "match_found", payload: { match_id: matchId, passage } });
         setStatus("found");
         router.push(`/race/${matchId}`);
       } else {

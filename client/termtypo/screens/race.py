@@ -149,6 +149,54 @@ class RaceScreen(Screen):
         self._start_race_channel()
         self.query_one(TypingArea).focus()
 
+        # Passage or names missing (common in cross-client races where the
+        # other client's broadcast didn't include them) — fetch from DB.
+        if not self._words or self._opponent_name == "Opponent":
+            self.run_worker(self._fetch_race_data, thread=True, exclusive=True)
+
+    def _fetch_race_data(self) -> None:
+        """Fetch passage and participant names from DB — fills in cross-client gaps."""
+        from termtypo.services.auth_service import get_authed_client
+        client = get_authed_client()
+        if not client:
+            return
+        try:
+            # Passage
+            if not self._words:
+                res = client.table("matches").select("passage, mode").eq("id", self._match_id).maybe_single().execute()
+                data = (res.data or {}) if res else {}
+                passage = data.get("passage", "")
+                if passage:
+                    self._passage = passage
+                    self._words   = passage.split()
+                    self.app.call_from_thread(
+                        lambda: self.query_one(TypingArea).reset(self._words)
+                    )
+
+            # Participant names
+            parts = client.table("match_participants").select("user_id, profiles(username, display_name)").eq("match_id", self._match_id).execute()
+            for p in (parts.data or []):
+                profile = p.get("profiles") or {}
+                name    = profile.get("display_name") or profile.get("username") or ""
+                if not name:
+                    continue
+                if p["user_id"] == self._user_id:
+                    self._my_name = name
+                else:
+                    self._opponent_name = name
+
+            # Refresh bars with updated names
+            def _update_bars():
+                my_bar  = self.query_one("#my-bar",  PlayerBar)
+                opp_bar = self.query_one("#opp-bar", PlayerBar)
+                my_bar._label  = self._my_name
+                opp_bar._label = self._opponent_name
+                my_bar._rebuild()
+                opp_bar._rebuild()
+            self.app.call_from_thread(_update_bars)
+        except Exception:
+            pass
+
     def _update_header(self, elapsed: float = 0.0, wpm: float = 0.0) -> None:
         t = Text()
         t.append(f"  {'RANKED' if self._ranked else 'PRIVATE'} RACE", style="bold #7aa2f7")
