@@ -14,7 +14,7 @@ What it does (in order):
     5. git commit "Release vX.Y.Z"
     6. git tag  vX.Y.Z
     7. git push + git push --tags
-       → GitHub Actions auto-builds Windows .exe + macOS binary
+       -> GitHub Actions auto-builds Windows .exe + macOS binary
          and attaches them to a GitHub Release page.
 """
 import os
@@ -155,7 +155,7 @@ def main() -> None:
 
         _run("git push", cwd=ROOT)
         _run(f"git push origin {tag}", cwd=ROOT)
-        print(f"  [7/7] Pushed → GitHub Actions building exe + macOS binary")
+        print(f"  [7/7] Pushed -> GitHub Actions building exe + macOS binary")
 
     print(f"\n  termtypo {tag} released!")
     print(f"  PyPI:    https://pypi.org/project/termtypo/{new_version}/")
