@@ -1,0 +1,11 @@
+.env
+.pypi_token
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+# *.spec intentionally NOT ignored — termtypo.spec is the PyInstaller build config
+session.json

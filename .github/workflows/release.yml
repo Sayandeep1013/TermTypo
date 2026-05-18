@@ -1,0 +1,77 @@
+# .github/workflows/release.yml
+#
+# Triggered on any tag push matching v*.*.* (e.g. v0.1.12)
+# Builds Windows .exe and macOS binary in parallel,
+# then attaches both to an auto-created GitHub Release.
+#
+# PyPI publishing is intentionally manual (run release.bat locally).
+
+name: Build Release Binaries
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  # ── Windows .exe ───────────────────────────────────────────────────────────
+  build-windows:
+    name: Windows .exe
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller
+          pip install -e ./client
+
+      - name: Build exe
+        run: pyinstaller termtypo.spec
+
+      - name: Rename for clarity
+        run: move dist\termtypo.exe dist\termtypo-windows.exe
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/termtypo-windows.exe
+          token: ${{ secrets.GITHUB_TOKEN }}
+          generate_release_notes: true
+
+  # ── macOS binary ───────────────────────────────────────────────────────────
+  build-macos:
+    name: macOS binary
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller
+          pip install -e ./client
+
+      - name: Build binary
+        run: pyinstaller termtypo.spec
+
+      - name: Rename for clarity
+        run: mv dist/termtypo dist/termtypo-macos
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/termtypo-macos
+          token: ${{ secrets.GITHUB_TOKEN }}
+          generate_release_notes: true

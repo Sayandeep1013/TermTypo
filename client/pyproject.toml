@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "termtypo"
+version = "0.1.11"
+description = "Terminal multiplayer typing test — ASCII art, ranked ladder, live races"
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.10"
+license = { text = "MIT" }
+keywords = ["typing", "terminal", "tui", "multiplayer", "game"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Environment :: Console",
+    "Topic :: Games/Entertainment",
+]
+dependencies = [
+    "textual>=0.70.0",
+    "supabase>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "platformdirs>=4.0.0",
+    "httpx>=0.25.0",
+]
+
+[project.scripts]
+termtypo = "termtypo.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.package-data]
+"termtypo" = ["assets/words/*.txt"]
