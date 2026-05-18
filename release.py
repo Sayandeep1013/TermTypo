@@ -106,7 +106,7 @@ def main() -> None:
     print(f"\n  TermTypo release")
     print(f"  {old_version}  ->  {new_version}  ({bump_kind})")
     if has_remote:
-        print(f"  Will push tag {tag} → GitHub Actions builds exe/binary")
+        print(f"  Will push tag {tag} -> GitHub Actions builds exe/binary")
     else:
         print(f"  No git remote — skipping git push (add origin to enable)")
     print()
