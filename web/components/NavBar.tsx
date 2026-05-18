@@ -37,7 +37,9 @@ export default function NavBar() {
 
       {/* Nav links */}
       <div className="hidden sm:flex items-center gap-6 text-sm text-[#565f89]">
-        <Link href="/play"        className="hover:text-[#c0caf5] transition-colors">play</Link>
+        <Link href="/play"        className="hover:text-[#c0caf5] transition-colors">solo</Link>
+        <Link href="/ranked"      className="hover:text-[#c0caf5] transition-colors">ranked</Link>
+        <Link href="/room"        className="hover:text-[#c0caf5] transition-colors">rooms</Link>
         <Link href="/leaderboard" className="hover:text-[#c0caf5] transition-colors">leaderboard</Link>
         {user && (
           <Link href="/profile" className="hover:text-[#c0caf5] transition-colors">profile</Link>

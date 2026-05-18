@@ -21,7 +21,9 @@ export default function CommandPalette() {
   const go = (path: string) => { setOpen(false); router.push(path); };
 
   const ALL_COMMANDS: Command[] = [
-    { id: "play",        label: "play",        hint: "start typing",          action: () => go("/play") },
+    { id: "solo",        label: "solo",        hint: "practice mode",         action: () => go("/play") },
+    { id: "ranked",      label: "ranked",      hint: "1v1 matchmaking",       action: () => go("/ranked") },
+    { id: "room",        label: "room",        hint: "private room with code",action: () => go("/room") },
     { id: "leaderboard", label: "leaderboard", hint: "global rankings",       action: () => go("/leaderboard") },
     { id: "profile",     label: "profile",     hint: "your stats & ELO",      action: () => go("/profile") },
     { id: "home",        label: "home",        hint: "back to start",         action: () => go("/") },
