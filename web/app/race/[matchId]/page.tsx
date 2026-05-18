@@ -158,10 +158,9 @@ export default function RacePage() {
         await sb.rpc("finish_match", {
           p_match_id:   matchId,
           p_winner_id:  myId,
-          p_loser_id:   "",  // DB will figure it out from participants
           p_winner_wpm: wpm,
-          p_loser_wpm:  oppProgress.wpm,
           p_winner_acc: acc,
+          p_loser_wpm:  oppProgress.wpm,
           p_loser_acc:  100,
         });
       } catch {}

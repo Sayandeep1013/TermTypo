@@ -1,37 +1,31 @@
-# termtypo.spec  — PyInstaller build for Windows (.exe) and macOS (binary)
+# termtypo.spec — PyInstaller build config
 #
-# Build commands:
-#   Windows:  pyinstaller termtypo.spec
-#   macOS:    pyinstaller termtypo.spec
+# Build:  pyinstaller termtypo.spec --clean
+# Output: dist/termtypo.exe  (Windows)
+#         dist/termtypo      (macOS / Linux)
 #
-# Output:  dist/termtypo.exe  (Windows)
-#          dist/termtypo      (macOS / Linux)
+# pyinstaller-hooks-contrib (installed as a PyInstaller dep) provides
+# automatic hooks for textual, rich, supabase, etc. — no collect_all needed.
 
+import sys
 from pathlib import Path
-from PyInstaller.utils.hooks import collect_all, collect_data_files
 
-ROOT   = Path(SPECPATH)          # project root (where this .spec lives)
+ROOT   = Path(SPECPATH)          # directory containing this .spec file
 CLIENT = ROOT / "client"
+ENTRY  = str(CLIENT / "termtypo" / "__main__.py")
 
 block_cipher = None
 
-# Collect all Textual and Rich data files (CSS, themes, fonts, etc.)
-textual_datas, textual_bins, textual_hidden = collect_all("textual")
-rich_datas,    rich_bins,    rich_hidden    = collect_all("rich")
-
 a = Analysis(
-    [str(CLIENT / "termtypo" / "__main__.py")],
+    [ENTRY],
     pathex=[str(CLIENT)],
-    binaries=textual_bins + rich_bins,
+    binaries=[],
     datas=[
-        # Word list assets
+        # Word list assets must be explicitly included
         (str(CLIENT / "termtypo" / "assets"), "termtypo/assets"),
-        # Textual + Rich internal data (CSS, themes, etc.)
-        *textual_datas,
-        *rich_datas,
     ],
     hiddenimports=[
-        # All termtypo modules (PyInstaller can miss dynamically-imported screens)
+        # All termtypo screens/services/widgets (dynamically loaded, PyInstaller misses them)
         "termtypo",
         "termtypo.app",
         "termtypo.config",
@@ -54,11 +48,12 @@ a = Analysis(
         "termtypo.services.race_service",
         "termtypo.services.supabase_client",
         "termtypo.services.word_service",
-        # Third-party
+        # Third-party (hooks-contrib may not cover all of these)
         "platformdirs",
         "dotenv",
         "httpx",
         "httpx._transports.default",
+        "httpx._transports.asgi",
         "supabase",
         "supabase_auth",
         "postgrest",
@@ -66,17 +61,19 @@ a = Analysis(
         "storage3",
         "websockets",
         "websockets.legacy",
+        "websockets.legacy.client",
         "pydantic",
         "pydantic.v1",
         "yarl",
-        *textual_hidden,
-        *rich_hidden,
+        "aiohttp",
     ],
     hookspath=[],
     runtime_hooks=[],
-    # Strip heavy unused packages to keep binary small
-    excludes=["tkinter", "PyQt5", "PyQt6", "wx", "gi", "PySide2", "PySide6",
-              "matplotlib", "numpy", "pandas", "scipy", "PIL"],
+    excludes=[
+        "tkinter", "PyQt5", "PyQt6", "wx", "gi",
+        "PySide2", "PySide6", "matplotlib", "numpy",
+        "pandas", "scipy", "PIL",
+    ],
     cipher=block_cipher,
     noarchive=False,
 )
@@ -97,11 +94,6 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=True,          # MUST be True — this is a terminal/console app
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
+    console=True,      # MUST be True — terminal app
     icon=None,
 )

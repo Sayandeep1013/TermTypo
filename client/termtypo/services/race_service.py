@@ -101,11 +101,12 @@ class RaceChannel:
 def finish_match(
     match_id: str,
     winner_id: str,
-    loser_id: str,
-    winner_wpm: float,
-    loser_wpm: float,
-    winner_acc: float,
-    loser_acc: float,
+    winner_wpm: float = 0,
+    winner_acc: float = 100,
+    loser_wpm: float  = 0,
+    loser_acc: float  = 100,
+    # loser_id no longer needed — DB auto-determines from match_participants
+    **_ignored,
 ) -> None:
     from termtypo.services.auth_service import get_authed_client
     client = get_authed_client()
@@ -114,10 +115,9 @@ def finish_match(
     client.rpc("finish_match", {
         "p_match_id":   match_id,
         "p_winner_id":  winner_id,
-        "p_loser_id":   loser_id,
         "p_winner_wpm": round(winner_wpm, 2),
-        "p_loser_wpm":  round(loser_wpm, 2),
         "p_winner_acc": round(winner_acc, 2),
+        "p_loser_wpm":  round(loser_wpm, 2),
         "p_loser_acc":  round(loser_acc, 2),
     }).execute()
 

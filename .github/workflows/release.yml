@@ -1,11 +1,6 @@
 # .github/workflows/release.yml
-#
 # Triggered by: git tag v*.*.* + push
 # Builds Windows .exe, macOS binary, Linux binary in parallel.
-# Attaches all three to an auto-created GitHub Release.
-#
-# No secrets needed — GITHUB_TOKEN is provided automatically.
-# PyPI publishing is intentionally manual via release.bat on the dev machine.
 
 name: Build Release Binaries
 
@@ -15,95 +10,99 @@ on:
       - "v*.*.*"
 
 jobs:
-  # ── Windows .exe ─────────────────────────────────────────────────────────────
   build-windows:
     name: Windows .exe
     runs-on: windows-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Install
+        shell: pwsh
         run: |
+          python -m pip install --upgrade pip
           pip install pyinstaller
           pip install -e ./client
 
-      - name: Build exe
-        run: pyinstaller termtypo.spec --clean
+      - name: Verify entry point exists
+        shell: pwsh
+        run: python -c "import termtypo; print('termtypo OK')"
 
-      - name: Rename binary
-        run: move dist\termtypo.exe dist\termtypo-windows.exe
+      - name: Build
+        shell: pwsh
+        run: pyinstaller termtypo.spec --clean --log-level WARN
 
-      - name: Upload to GitHub Release
+      - name: Rename
+        shell: pwsh
+        run: Move-Item dist\termtypo.exe dist\termtypo-windows.exe
+
+      - name: Upload
         uses: softprops/action-gh-release@v2
         with:
           files: dist/termtypo-windows.exe
           token: ${{ secrets.GITHUB_TOKEN }}
           generate_release_notes: true
 
-  # ── macOS binary ─────────────────────────────────────────────────────────────
   build-macos:
     name: macOS binary
     runs-on: macos-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Install
         run: |
+          python -m pip install --upgrade pip
           pip install pyinstaller
           pip install -e ./client
 
-      - name: Build binary
-        run: pyinstaller termtypo.spec --clean
+      - name: Verify entry point exists
+        run: python -c "import termtypo; print('termtypo OK')"
 
-      - name: Rename binary
+      - name: Build
+        run: pyinstaller termtypo.spec --clean --log-level WARN
+
+      - name: Rename
         run: mv dist/termtypo dist/termtypo-macos
 
-      - name: Upload to GitHub Release
+      - name: Upload
         uses: softprops/action-gh-release@v2
         with:
           files: dist/termtypo-macos
           token: ${{ secrets.GITHUB_TOKEN }}
 
-  # ── Linux binary ─────────────────────────────────────────────────────────────
   build-linux:
     name: Linux binary
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Install
         run: |
+          python -m pip install --upgrade pip
           pip install pyinstaller
           pip install -e ./client
 
-      - name: Build binary
-        run: pyinstaller termtypo.spec --clean
+      - name: Verify entry point exists
+        run: python -c "import termtypo; print('termtypo OK')"
 
-      - name: Rename binary
+      - name: Build
+        run: pyinstaller termtypo.spec --clean --log-level WARN
+
+      - name: Rename
         run: mv dist/termtypo dist/termtypo-linux
 
-      - name: Upload to GitHub Release
+      - name: Upload
         uses: softprops/action-gh-release@v2
         with:
           files: dist/termtypo-linux
