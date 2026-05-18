@@ -173,14 +173,16 @@ class RaceScreen(Screen):
                         lambda: self.query_one(TypingArea).reset(self._words)
                     )
 
-            # Participant names
-            parts = client.table("match_participants").select("user_id, profiles(username, display_name)").eq("match_id", self._match_id).execute()
+            # Participant names — fetch user_ids first, then query profiles directly
+            parts = client.table("match_participants").select("user_id").eq("match_id", self._match_id).execute()
             for p in (parts.data or []):
-                profile = p.get("profiles") or {}
-                name    = profile.get("display_name") or profile.get("username") or ""
+                uid = p["user_id"]
+                prof_res = client.table("profiles").select("username, display_name").eq("id", uid).maybe_single().execute()
+                profile  = (prof_res.data or {}) if prof_res else {}
+                name     = profile.get("display_name") or profile.get("username") or ""
                 if not name:
                     continue
-                if p["user_id"] == self._user_id:
+                if uid == self._user_id:
                     self._my_name = name
                 else:
                     self._opponent_name = name

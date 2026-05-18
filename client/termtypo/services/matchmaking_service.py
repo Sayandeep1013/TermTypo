@@ -188,15 +188,31 @@ class MatchmakingWatcher:
                     ids.append(uid)
         return list(set(ids))
 
-    def _handle_presence_change(self, payload=None) -> None:
+    def _handle_presence_change(self, *args, **kwargs) -> None:
+        # on_presence_join passes (key, current_presences, new_presences) — 3 args.
+        # on_presence_sync passes no args.
+        # Accept both with *args so neither throws a TypeError.
         if self._stopped:
             return
+
+        # Try extracting IDs from the full presence state first
         state = self._channel.presence_state()
         user_ids = self._extract_user_ids(state)
 
+        # Fallback: on_presence_join passes new_presences as 3rd arg — use it directly
+        if not user_ids and len(args) >= 3:
+            new_presences = args[2]
+            items = new_presences if isinstance(new_presences, list) else [new_presences]
+            for p in items:
+                uid = p.get("user_id") or p.get("payload", {}).get("user_id")
+                if uid:
+                    user_ids.append(uid)
+            if self.user_id not in user_ids:
+                user_ids.append(self.user_id)
+            user_ids = list(set(user_ids))
+
         if len(user_ids) >= 2 and min(user_ids) == self.user_id:
             opponent_id = next(u for u in user_ids if u != self.user_id)
-            # Run in a separate thread — sync HTTP calls must not block the asyncio loop
             t = threading.Thread(target=self._try_create_match, args=(opponent_id,), daemon=True)
             t.start()
 
