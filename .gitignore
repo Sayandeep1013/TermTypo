@@ -9,3 +9,6 @@ build/
 venv/
 # *.spec intentionally NOT ignored — termtypo.spec is the PyInstaller build config
 session.json
+web/.env.local
+web/.next/
+web/node_modules/

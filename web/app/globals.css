@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+:root {
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  --tt-bg:        #1a1b26;
+  --tt-surface:   #24283b;
+  --tt-overlay:   #292e42;
+  --tt-border:    #2a2b3d;
+  --tt-text:      #c0caf5;
+  --tt-muted:     #565f89;
+  --tt-primary:   #7aa2f7;
+  --tt-secondary: #bb9af7;
+  --tt-accent:    #7dcfff;
+  --tt-success:   #9ece6a;
+  --tt-warning:   #e0af68;
+  --tt-error:     #f7768e;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  background-color: var(--tt-bg);
+  color: var(--tt-text);
+  font-family: var(--font-mono);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Thin terminal-style scrollbar */
+::-webkit-scrollbar        { width: 5px; height: 5px; }
+::-webkit-scrollbar-track  { background: var(--tt-bg); }
+::-webkit-scrollbar-thumb  { background: var(--tt-border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--tt-muted); }
+
+/* Highlight colour */
+::selection { background: #7aa2f730; }
+
+/* Cursor blink */
+.cursor::after {
+  content: "▋";
+  color: var(--tt-primary);
+  animation: blink 1.2s step-end infinite;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
