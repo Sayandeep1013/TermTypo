@@ -113,12 +113,13 @@ class RaceResultsScreen(Screen):
         self.query_one("#content", Static).update(t)
 
     def action_go_home(self) -> None:
-        # Pop back to home, clearing any intermediate screens
-        while len(self.app.screen_stack) > 1:
+        n = len(self.app.screen_stack) - 1
+        for _ in range(n):
             self.app.pop_screen()
 
     def action_rematch(self) -> None:
-        while len(self.app.screen_stack) > 1:
+        n = len(self.app.screen_stack) - 1
+        for _ in range(n):
             self.app.pop_screen()
         from termtypo.screens.matchmaking import MatchmakingScreen
         self.app.push_screen(MatchmakingScreen(mode=self._mode))

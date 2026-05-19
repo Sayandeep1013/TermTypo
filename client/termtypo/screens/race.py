@@ -11,6 +11,7 @@ from textual.screen import Screen
 from textual.widgets import Static
 from rich.text import Text
 
+from termtypo.widgets.keyboard_widget import KeyboardWidget
 from termtypo.widgets.typing_area import TypingArea, TypingState
 
 
@@ -142,7 +143,11 @@ class RaceScreen(Screen):
             with Static(id="typing-box"):
                 yield TypingArea(self._words, id="typing-area")
             yield Static("start typing to race!", id="waiting-hint")
+        yield KeyboardWidget(id="keyboard")
         yield Static("[esc] forfeit", id="hint-bar")
+
+    def on_typing_area_key_typed(self, msg: TypingArea.KeyTyped) -> None:
+        self.query_one(KeyboardWidget).set_key(msg.char, msg.correct)
 
     def on_mount(self) -> None:
         self._update_header()
@@ -336,6 +341,8 @@ class RaceScreen(Screen):
     # ── actions ───────────────────────────────────────────────────────────────
 
     def action_forfeit(self) -> None:
+        if self._finished:
+            return
         if self._race_channel:
             self._race_channel.stop()
         self._stop_handles()

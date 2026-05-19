@@ -11,6 +11,7 @@ from rich.text import Text
 
 from termtypo.screens.results import ResultsModal
 from termtypo.services.word_service import get_timed_words, get_words
+from termtypo.widgets.keyboard_widget import KeyboardWidget
 from termtypo.widgets.typing_area import TypingArea, TypingState
 
 DEFAULT_MODE = "words_50"
@@ -192,7 +193,11 @@ class SoloScreen(Screen):
                 yield TypingArea(self._words_for_mode(self._current_mode), id="typing-area")
             yield WaitingHint(id="waiting-hint")
         yield StatsBar(id="stats-bar")
+        yield KeyboardWidget(id="keyboard")
         yield HintBar()
+
+    def on_typing_area_key_typed(self, msg: TypingArea.KeyTyped) -> None:
+        self.query_one(KeyboardWidget).set_key(msg.char, msg.correct)
 
     def on_mount(self) -> None:
         self.query_one(TypingArea).focus()

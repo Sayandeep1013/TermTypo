@@ -73,8 +73,7 @@ class TypingArea(Widget):
 
     DEFAULT_CSS = """
     TypingArea {
-        height: auto;
-        min-height: 6;
+        height: 3;
         padding: 1 2;
     }
     """
@@ -90,10 +89,20 @@ class TypingArea(Widget):
     class WordAdvanced(Message):
         pass
 
+    class KeyTyped(Message):
+        """Fired on every printable keypress — used by KeyboardWidget."""
+        def __init__(self, char: str, correct: bool) -> None:
+            super().__init__()
+            self.char    = char
+            self.correct = correct
+
     def __init__(self, words: list[str], **kwargs) -> None:
         super().__init__(**kwargs)
         self.state = TypingState()
         self.state.reset(words)
+
+    def on_mount(self) -> None:
+        self.refresh()
 
     def reset(self, words: list[str]) -> None:
         self.state.reset(words)
@@ -103,51 +112,54 @@ class TypingArea(Widget):
 
     def render(self) -> RenderResult:
         s = self.state
-        text = Text()
+        width = self.content_size.width or 80
+        half  = width // 2
 
+        # Build full flat text for all words
+        full = Text()
         for wi, word in enumerate(s.words):
             if wi > 0:
-                text.append(" ")
-
+                full.append(" ")
             typed = s.typed[wi]
 
             if wi < s.current_word:
-                # completed word
-                for ci, expected in enumerate(word):
+                for ci, ch in enumerate(word):
                     if ci < len(typed):
-                        style = "#9ece6a" if typed[ci] == expected else "#f7768e"
-                        text.append(typed[ci], style=style)
+                        full.append(typed[ci], style="#9ece6a" if typed[ci] == ch else "#f7768e")
                     else:
-                        text.append(expected, style="#f7768e")
-                # extra chars typed beyond word length
+                        full.append(ch, style="#f7768e")
                 for extra in typed[len(word):]:
-                    text.append(extra, style="on #f7768e")
+                    full.append(extra, style="on #f7768e")
 
             elif wi == s.current_word:
-                # active word
-                cursor_pos = len(typed)
-                for ci, expected in enumerate(word):
-                    if ci < len(typed):
-                        if typed[ci] == expected:
-                            text.append(typed[ci], style="bold #9ece6a")
-                        else:
-                            text.append(expected, style="bold #f7768e")
-                    elif ci == cursor_pos:
-                        text.append(expected, style="reverse #7aa2f7")
+                cursor_p = len(typed)
+                for ci, ch in enumerate(word):
+                    if ci < cursor_p:
+                        full.append(typed[ci], style="bold #9ece6a" if typed[ci] == ch else "bold #f7768e")
+                    elif ci == cursor_p:
+                        full.append(ch, style="reverse #7aa2f7")
                     else:
-                        text.append(expected, style="#565f89")
-                # extra chars beyond word end
+                        full.append(ch, style="#565f89")
                 for extra in typed[len(word):]:
-                    text.append(extra, style="on #f7768e")
-                # cursor at very end of word (all chars typed, correct or not)
-                if cursor_pos == len(word) and not typed[len(word):]:
-                    pass  # cursor shown by next space character logic
+                    full.append(extra, style="on #f7768e")
 
             else:
-                # upcoming word
-                text.append(word, style="#565f89")
+                full.append(word, style="#565f89")
 
-        return text
+        # Cursor flat index: chars to the left of the cursor
+        cursor_flat = sum(len(s.words[i]) + 1 for i in range(s.current_word))
+        if s.current_word < len(s.words):
+            cursor_flat += len(s.typed[s.current_word])
+
+        # Visible window: keep cursor at horizontal center
+        start = max(0, cursor_flat - half)
+        lead  = max(0, half - cursor_flat)   # extra spaces before text when near start
+
+        result = Text()
+        if lead:
+            result.append(" " * lead)
+        result.append_text(full[start : start + width - lead])
+        return result
 
     # ── input handling ────────────────────────────────────────────────────────
 
@@ -209,8 +221,10 @@ class TypingArea(Widget):
             expected = s.words[wi][ci] if ci < len(s.words[wi]) else None
             s.typed[wi].append(char)
             s.total_keystrokes += 1
-            if expected and char == expected:
+            correct = bool(expected and char == expected)
+            if correct:
                 s.correct_keystrokes += 1
+            self.post_message(self.KeyTyped(char, correct))
 
             # Auto-finish: end the moment the last word is typed exactly — no
             # trailing space required.  MonkeyType / TypeRacer both do this.

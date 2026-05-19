@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import KeyboardViz from "@/components/KeyboardViz";
 
 // ── word list (same pool as the terminal app) ─────────────────────────────────
 const WORDS = `the be to of and a in that have it for not on with he as you do at this but his by from they we say her she or an will my one all would there their what so up out if about who get which go me when make can like time no just him know take people into year your good some could them see other than then now look only come its over think also back after use two how our work first well way even new want because any these give day most us able above across act add afraid age ago agree air allow almost alone already although among animal another answer any anyone anything area arrive art ask away baby bad bag ball band base bear beat before begin behind believe beside better big bird bite black blue body book both bottom boy bring broken brother build burn busy call care carry cat catch cause change check child choice choose city clean clear climb close cold comment complete consider contain control cook cool count course cover cry cut dark dead deal dear decide deep different direct distance dog dry during early eat either else enough ever evil example except exist face fail fall family fast father feel file fill fire fish fly follow food friend full fun glad gone grow half hand happen hard head hear heart hide history hot human idea island join just key kind learn leave level life linger list little long love low mean meet mind miss money mother much must near never night north nothing notice now object often once order past patient plan point poor possible problem question read ready real reason record result river road role run same school sea second seem send set short should side sign slow small song south speak step stop story strong such sure system talk tell thought together top touch travel true try understand until very watch way while wish word write wrong year young`.split(" ").filter(Boolean);
@@ -31,12 +32,26 @@ export default function TypingTest() {
   const [finished,   setFinished]   = useState(false);
   const [elapsed,    setElapsed]    = useState(0);
   const [result,     setResult]     = useState<Result | null>(null);
+  const [lastChar,   setLastChar]   = useState("");
+  const [lastCorrect,setLastCorrect]= useState(true);
 
-  const startTime   = useRef<number>(0);
-  const timerRef    = useRef<ReturnType<typeof setInterval> | null>(null);
-  const inputRef    = useRef<HTMLInputElement>(null);
-  const totalKeys   = useRef(0);
-  const correctKeys = useRef(0);
+  const startTime      = useRef<number>(0);
+  const timerRef       = useRef<ReturnType<typeof setInterval> | null>(null);
+  const inputRef       = useRef<HTMLInputElement>(null);
+  const typingBoxRef   = useRef<HTMLDivElement>(null);
+  const totalKeys      = useRef(0);
+  const correctKeys    = useRef(0);
+  const [halfWidth, setHalfWidth] = useState(0);
+
+  useEffect(() => {
+    const el = typingBoxRef.current;
+    if (!el) return;
+    const update = () => setHalfWidth(el.clientWidth / 2);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const modeKey = mode === "words" ? `words_${wordCount}` : `time_${timeSec}`;
 
@@ -138,6 +153,8 @@ export default function TypingTest() {
 
     if (e.key === " ") {
       e.preventDefault();
+      setLastChar(" ");
+      setLastCorrect(true);
       if (!typed[curWord]?.length) return;
       const nextWord = curWord + 1;
       if (nextWord >= words.length) { finish(el, typed, nextWord); return; }
@@ -155,6 +172,9 @@ export default function TypingTest() {
       const correct = e.key === expected;
       totalKeys.current++;
       if (correct) correctKeys.current++;
+      // Update keyboard visualization
+      setLastChar(e.key);
+      setLastCorrect(correct);
 
       setTyped(prev => {
         const next = prev.map(a => [...a]);
@@ -184,6 +204,8 @@ export default function TypingTest() {
   // ── display time ────────────────────────────────────────────────────────────
   const remaining = Math.max(0, timeSec - elapsed);
   const liveWpm   = started && !finished ? wpm(elapsed || 0.1, correctKeys.current) : 0;
+  const scrollChars = words.slice(0, curWord).reduce((sum, w) => sum + w.length + 1, 0)
+    + (typed[curWord]?.length ?? 0);
 
   // ── render ──────────────────────────────────────────────────────────────────
   return (
@@ -229,35 +251,42 @@ export default function TypingTest() {
         </div>
       </div>
 
-      {/* Words display */}
+      {/* Words display — scrolling teleprompter */}
       {!result ? (
-        <div className="relative bg-[#1a1b26] border border-[#2a2b3d] p-4 min-h-24 leading-8 text-base cursor-text select-none"
-          style={{ fontFamily: "var(--font-mono)" }}>
-          {words.map((word, wi) => {
-            const t = typed[wi] ?? [];
-            const isCurrent = wi === curWord;
-            return (
-              <span key={wi} className="mr-2 inline-block">
-                {word.split("").map((ch, ci) => {
-                  const typedCh = t[ci];
-                  let cls = "text-[#565f89]"; // untyped
-                  if (typedCh !== undefined) {
-                    cls = typedCh === ch ? "text-[#9ece6a]" : "text-[#f7768e]";
-                  }
-                  const isCursor = isCurrent && ci === t.length;
-                  return (
-                    <span key={ci} className={`${cls} ${isCursor ? "border-l-2 border-[#7aa2f7]" : ""}`}>
-                      {ch}
-                    </span>
-                  );
-                })}
-                {/* Extra characters typed beyond word length */}
-                {t.slice(word.length).map((ch, i) => (
-                  <span key={`extra-${i}`} className="text-[#f7768e] bg-[#f7768e20]">{ch}</span>
-                ))}
-              </span>
-            );
-          })}
+        <div
+          ref={typingBoxRef}
+          className="relative bg-[#1a1b26] border border-[#2a2b3d] px-4 overflow-hidden cursor-text select-none"
+          style={{ fontFamily: "var(--font-mono)", height: "3rem", display: "flex", alignItems: "center" }}
+        >
+          <div
+            className="flex items-center whitespace-nowrap transition-transform duration-75"
+            style={{ transform: `translateX(calc(${halfWidth}px - ${scrollChars}ch))` }}
+          >
+            {words.map((word, wi) => {
+              const t = typed[wi] ?? [];
+              const isCurrent = wi === curWord;
+              return (
+                <span key={wi} className="mr-2 inline-flex">
+                  {word.split("").map((ch, ci) => {
+                    const typedCh = t[ci];
+                    let cls = "text-[#565f89]";
+                    if (typedCh !== undefined) {
+                      cls = typedCh === ch ? "text-[#9ece6a]" : "text-[#f7768e]";
+                    }
+                    const isCursor = isCurrent && ci === t.length;
+                    return (
+                      <span key={ci} className={`${cls} ${isCursor ? "border-l-2 border-[#7aa2f7]" : ""}`}>
+                        {ch}
+                      </span>
+                    );
+                  })}
+                  {t.slice(word.length).map((ch, i) => (
+                    <span key={`extra-${i}`} className="text-[#f7768e] bg-[#f7768e20]">{ch}</span>
+                  ))}
+                </span>
+              );
+            })}
+          </div>
           {!started && (
             <div className="absolute inset-0 flex items-center justify-center text-[#565f89] text-sm pointer-events-none">
               start typing to begin
@@ -291,6 +320,9 @@ export default function TypingTest() {
           </div>
         </div>
       )}
+
+      {/* Keyboard visualization */}
+      {!result && <KeyboardViz lastChar={lastChar} lastCorrect={lastCorrect} />}
 
       {/*
         Hidden input that captures all keystrokes.

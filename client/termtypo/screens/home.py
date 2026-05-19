@@ -32,8 +32,11 @@ class HomeMenu(Static):
     """
 
     def render(self):
+        user = current_user()
         text = Text()
         for key, label, _ in MENU_ITEMS:
+            if key == "a" and user:
+                label = "Profile / Logout"
             text.append(f"  {label:<30}", style="#c0caf5")
             text.append(f"{key}\n", style="bold #7aa2f7")
         return Align(text, align="center")
@@ -89,6 +92,7 @@ class HomeScreen(Screen):
 
     def on_screen_resume(self) -> None:
         self.query_one(StatusBar)._refresh_user()
+        self.query_one(HomeMenu).refresh()
 
     # ── actions ──────────────────────────────────────────────────────────────
 
