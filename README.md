@@ -26,6 +26,16 @@ Ranked 1v1 matches, live races, ELO ladder, and a global leaderboard — all ins
 
 ---
 
+## Screenshots
+
+Web app, solo practice mode:
+
+| Landing | Live typing | Results |
+|---|---|---|
+| ![Landing page](screenshots/readme/01-landing.png) | ![Solo practice with live keyboard visualization](screenshots/readme/02-solo-typing.png) | ![Results — WPM, raw WPM, accuracy](screenshots/readme/03-solo-results.png) |
+
+---
+
 ## Install
 
 **With pip (recommended):**
