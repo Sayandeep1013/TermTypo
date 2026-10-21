@@ -4,11 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "termtypo"
-version = "0.1.16"
+version = "0.1.17"
 description = "Terminal multiplayer typing test — ASCII art, ranked ladder, live races"
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
 license = { text = "MIT" }
+authors = [{ name = "Sayandeep" }]
 keywords = ["typing", "terminal", "tui", "multiplayer", "game"]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -22,6 +23,11 @@ dependencies = [
     "platformdirs>=4.0.0",
     "httpx>=0.25.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Sayandeep1013/TermTypo"
+Source = "https://github.com/Sayandeep1013/TermTypo"
+Issues = "https://github.com/Sayandeep1013/TermTypo/issues"
 
 [project.scripts]
 termtypo = "termtypo.__main__:main"
